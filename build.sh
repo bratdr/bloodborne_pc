@@ -100,6 +100,19 @@ echo "Built $PWD/out/bb-probe"
 # GPU and controller inventory; keep the Windows C dialect and include SDL headers.
 "$CC" "${cstd[@]}" -O2 -Wall -Wextra -Werror "${includes[@]}" tools/gpu_capabilities.c "${libraries[@]}" -o out/bb-gpu-capabilities
 fi
+if [[ -n $windows ]]; then
+    copy_deps() {
+        local exe="$1"
+        ldd "$exe" 2>/dev/null | awk '{print $3}' | grep -E '^/[A-Za-z]/msys64/clang64/bin/.*\.dll$|^/clang64/bin/.*\.dll$' || true
+    }
+    for exe in out/bb-engine-assets.exe out/bb-gpu-capabilities.exe out/bb-probe.exe; do
+        if [[ -f $exe ]]; then
+            while IFS= read -r dll; do
+                [[ -f $dll ]] && cp -f "$dll" out/
+            done < <(copy_deps "$exe")
+        fi
+    done
+fi
 if [[ ${1:-} == --test ]]; then
     "$CC" -std=c11 -O2 -g -Wall -Wextra -Werror -pthread "${includes[@]}" -I. -Isrc tests/test_pad.c "${libraries[@]}" -o out/pad-test
     out/pad-test

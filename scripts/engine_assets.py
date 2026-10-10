@@ -202,9 +202,13 @@ def prepare_menu_assets(game, elf_path, cache, tool, rebirth=False):
         if current is None:
             destination.parent.mkdir(parents=True, exist_ok=True)
             temporary = destination.with_name(destination.name + f'.{os.getpid()}.tmp')
+            env = dict(os.environ)
+            msys_clang = Path(os.environ.get('BB_MSYS2', r'C:\msys64')) / 'clang64' / 'bin'
+            if msys_clang.is_dir() and str(msys_clang) not in env.get('PATH', ''):
+                env['PATH'] = f"{msys_clang}{os.pathsep}{env.get('PATH', '')}"
             try:
                 result = subprocess.run([str(tool), kind, str(source), str(temporary)],
-                                        capture_output=True, text=True, errors='replace')
+                                        env=env, capture_output=True, text=True, errors='replace')
                 if result.returncode:
                     raise ValueError(result.stderr.strip() or f'Menu generator failed: {relative}')
                 current = sha(temporary.read_bytes())

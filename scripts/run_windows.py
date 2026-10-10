@@ -48,6 +48,12 @@ def msys_root():
     return Path(os.environ.get('BB_MSYS2', r'C:\msys64'))
 
 
+def configure_msys_path():
+    clang64_bin = msys_root() / 'clang64' / 'bin'
+    if clang64_bin.is_dir() and str(clang64_bin) not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = f"{clang64_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+
+
 def run(arguments, capture=False, check=True, env=None):
     result = subprocess.run(
         [str(a) for a in arguments],
@@ -103,6 +109,7 @@ def configure_frame_rate(env):
 
 
 def main():
+    configure_msys_path()
     arguments = sys.argv[1:]
     game = os.environ.get('BB_GAME_DIR')
     if arguments[:1] == ['--game-dir'] and len(arguments) > 1:
