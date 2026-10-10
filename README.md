@@ -346,7 +346,7 @@ default, 0 = the game's own),
 `BB_GC_IDLE_SECONDS=N` / `BB_VRAM_IDLE_SECONDS=N` (how long unused textures / buffers stay in VRAM;
 20 / 60), `BB_BREADCRUMBS=0` (no GPU breadcrumbs; with them a GPU hang names the draw or dispatch
 it is stuck in), `BB_GPU_PROFILE=1` (GPU time per
-pass), `BB_FSR4_PROFILE=1` (GPU time per FSR 4 pass), `BB_UPSCALER=taa|fsr3|fsr4|fsr411|off|none`,
+pass), `BB_FSR4_PROFILE=1` (GPU time per FSR 4 pass), `BB_UPSCALER=taa|fsr3|fsr4|fsr411|dlss|xess|off|none`,
 `BB_FRAMES_AHEAD=N` (how many frames the GPU command thread may run ahead of the GPU; 1 by default,
 0 = unbounded), `BB_PRESENT_THREAD=0` (present on the vblank thread, as before),
 `BB_LIVE_RES=1` (live resolution changes instead of the startup patch for outputs other than 1080p),
@@ -408,6 +408,81 @@ GPU page tracking and crash reports run in a vectored exception handler; the gue
 pointer lives in a TEB TLS slot (`patch_tls_reads` in `src/probe.c`); `src/win32_compat.c`
 covers file system and time zone details. With libc++ on Windows, `std::thread::get_id()` and
 `std::jthread::joinable()` ask the kernel (`GetThreadId`): hot paths keep their own flags.
+
+## Intel XeSS Integration & Architecture Plan
+
+Intel XeSS (Xe Super Sampling) is integrated natively as a dynamic Vulkan upscaler alternative alongside AMD FSR 3.1/4/4.1.1, NVIDIA DLSS, and TAA. Unlike DLSS which requires NVIDIA RTX hardware, Intel XeSS runs across all modern GPUs (Intel Arc, AMD Radeon, NVIDIA GeForce) supporting Shader Model 6.4+ / DP4a or XMX.
+
+### Architecture Overview
+
+1. **Dynamic Runtime Loading (Zero Compile-Time SDK Dependency)**
+   - Header: [`gpu/shadps4/video_core/renderer_vulkan/vk_xess.h`](gpu/shadps4/video_core/renderer_vulkan/vk_xess.h)
+   - Implementation: [`gpu/shadps4/video_core/renderer_vulkan/vk_xess.cpp`](gpu/shadps4/video_core/renderer_vulkan/vk_xess.cpp)
+   - Dynamically loads `libxess.dll` (Windows) or `libxess.so` (Linux) via `LoadLibraryA` / `dlopen`.
+   - Probes functions: `xessGetVersion`, `xessVKCreateContext`, `xessDestroyContext`, `xessVKInit`, `xessVKExecute`, `xessSetJitterOffsets`, `xessSetExposureMultiplier`.
+   - Looks for `libxess.dll` / `libxess.so` in `out/`, adjacent to the executable, and in the path specified by `BB_XESS_DIR`.
+
+2. **Frame Pipeline & Synchronization**
+   - Implements `XessUpscaler::Record(const Fsr4Upscaler::Frame& frame)`.
+   - Uses low-resolution 2D motion vectors in render pixels (matching Bloodborne's camera + object motion vector system).
+   - Standard linear depth buffer (0.0 near, 1.0 far).
+   - Explicit Vulkan 1.3 `pipelineBarrier2` transitions for inputs (`color`, `depth`, `motion`) from `VK_IMAGE_LAYOUT_GENERAL` to `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` prior to `xessVKExecute`, and restores them back to `VK_IMAGE_LAYOUT_GENERAL` post-dispatch.
+   - The output texture is written directly in `VK_IMAGE_LAYOUT_GENERAL`.
+
+3. **Quality Preset Mapping**
+   | Bloodborne Preset | Scale Divisor | XeSS Quality Mode |
+   |---|---|---|
+   | Performance (`3`) | 2.0× | `XESS_QUALITY_SETTING_PERFORMANCE` |
+   | Balanced (`2`) | 1.7× | `XESS_QUALITY_SETTING_BALANCED` |
+   | Quality (`1`) | 1.5× | `XESS_QUALITY_SETTING_QUALITY` |
+   | Ultra Quality (`0`) | 1.3× | `XESS_QUALITY_SETTING_ULTRA_QUALITY` |
+   | Ultra Quality Plus (`4`) | 1.3× | `XESS_QUALITY_SETTING_ULTRA_QUALITY_PLUS` |
+   | Native AA (`-1`) | 1.0× | `XESS_QUALITY_SETTING_AA` |
+
+4. **Settings & Runtime Fallback**
+   - Enum `UpscalerXess = 6` in [`gpu/shim/bbport_settings.h`](gpu/shim/bbport_settings.h).
+   - Configuration string: `upscaler=xess` in `bbport.ini` or environment variable `BB_UPSCALER=xess`.
+   - If `upscaler=xess` is configured but `libxess` is unavailable on the system, `ConfigureUpscalerSupport()` automatically logs a fallback warning and drops back to `UpscalerFsr3` (FSR 3.1) prior to rendering the first frame.
+
+5. **In-Game Overlay & Setup Tooling**
+   - [`gpu/shim/bbport_overlay.cpp`](gpu/shim/bbport_overlay.cpp): "Intel XeSS" appears dynamically in the ImGui upscaler dropdown menu whenever `s.xess_supported` is true.
+   - [`tools/fetch_xess.sh`](tools/fetch_xess.sh): Downloads official release binaries from `github.com/intel/xess` into `out/libxess.dll`.
+   - [`tools/setup/BbportSetup.cs`](tools/setup/BbportSetup.cs): Includes "Intel XeSS" in the Windows setup GUI with automatic model download check.
+
+---
+
+### AI Agent Implementation Plan & Maintenance Guide
+
+For future AI agents modifying, extending, or debugging this subsystem, follow this checklist:
+
+- [ ] **Phase 1: Binary Interface & Definitions**
+  - Verify `xess_vk.h` structs and API typedefs in [`gpu/shadps4/video_core/renderer_vulkan/vk_xess.cpp`](gpu/shadps4/video_core/renderer_vulkan/vk_xess.cpp).
+  - Maintain ABI compatibility with official Intel XeSS SDK releases (v1.3.x+).
+  - Ensure `XessUpscaler` implements `Available()`, `Record()`, `Problem()`, and `Fatal()`.
+
+- [ ] **Phase 2: Renderer Hooking (`TemporalUpscaler`)**
+  - Include `vk_xess.h` in [`gpu/shadps4/video_core/renderer_vulkan/vk_temporal_upscaler.h`](gpu/shadps4/video_core/renderer_vulkan/vk_temporal_upscaler.h).
+  - Instantiate `std::unique_ptr<XessUpscaler> xess` in `TemporalUpscaler::EnsureResources`.
+  - In `TemporalUpscaler::RecordFsr4`, route dispatch: `const bool use_xess = settings.upscaler == BbSettings::UpscalerXess && xess;`.
+  - In `TemporalUpscaler::UseFsr4()`, include `UpscalerXess` in `IsFrameUpscaler()`.
+
+- [ ] **Phase 3: Settings & Overlay Integration**
+  - Update `BbSettings::Values::xess_supported` atomic flag in `bbport_settings.h`.
+  - Update `BbSettings::ConfigureUpscalerSupport()` fallback validation in `bbport_settings.cpp`.
+  - Update `BbOverlay::RenderUpscaler()` dropdown in `bbport_overlay.cpp`.
+  - Update `scripts/patches.py` for `BB_UPSCALER=xess`.
+
+- [ ] **Phase 4: Windows Toolchain & DLL Packaging**
+  - In `run.bat`: Ensure `%BB_MSYS2%\clang64\bin` is prepended to `PATH`.
+  - In `scripts/run_windows.py` and `scripts/engine_assets.py`: Prepend `clang64\bin` to `os.environ['PATH']` to prevent missing `libc++.dll` errors when `bb-engine-assets.exe` or `bb-gpu-capabilities.exe` are spawned.
+  - In `build.sh`: Use `copy_deps` to automatically stage `libc++.dll`, `zlib1.dll`, and `SDL3.dll` into `out/`.
+  - In `tools/setup/BbportSetup.cs`: Stage runtime DLLs during configuration and expose the XeSS download checkbox.
+
+- [ ] **Phase 5: Verification & Automated Tests**
+  - Build test targets: `ninja -C out/gpu settings-test upscaler-support-test`.
+  - Run C++ unit tests: `out/gpu/settings-test.exe` and `out/gpu/upscaler-support-test.exe`.
+  - Run Python patch tests: `python -m unittest discover -s tests -p 'test_patches.py'`.
+  - Verify standalone CLI execution: `.\out\bb-engine-assets.exe` (must exit cleanly without missing DLL errors).
 
 ## Repository layout
 

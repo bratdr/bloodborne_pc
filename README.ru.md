@@ -321,7 +321,7 @@ VRAM, GTT, RSS, текстуры и блоки памяти игры в VRAM), `
 `BB_GC_IDLE_SECONDS=N` / `BB_VRAM_IDLE_SECONDS=N` (сколько неиспользуемые текстуры / буферы
 остаются в VRAM; 20 / 60), `BB_BREADCRUMBS=0` (без меток GPU; с ними зависание видеокарты
 называет отрисовку или dispatch, на которой она встала), `BB_GPU_PROFILE=1` (время GPU по
-проходам), `BB_FSR4_PROFILE=1` (время каждого прохода FSR 4), `BB_UPSCALER=taa|fsr3|fsr4|fsr411|off|none`,
+проходам), `BB_FSR4_PROFILE=1` (время каждого прохода FSR 4), `BB_UPSCALER=taa|fsr3|fsr4|fsr411|dlss|xess|off|none`,
 `BB_FRAMES_AHEAD=N` (на сколько кадров поток команд может опережать GPU; по умолчанию 1, 0 — без
 ограничения), `BB_PRESENT_THREAD=0` (показ в потоке vblank, как раньше), `BB_LIVE_RES=1` (смена
 разрешения без перезапуска вместо патча при запуске для вывода не 1080p),
