@@ -410,6 +410,11 @@ public partial class MainWindow : Window
         Fsr4Status.Text = fsr411 ? "4.1.1 available" : fsr4 ? "v07 available" : "Assets not installed";
         Fsr4Status.Foreground = (fsr411 || fsr4) ? Green() : Muted();
 
+        string xess = Path.Combine(root, "out", "libxess.dll");
+        if (!File.Exists(xess)) xess = Path.Combine(root, "libxess.dll");
+        XessStatus.Text = File.Exists(xess) ? "Available" : "Library not installed";
+        XessStatus.Foreground = File.Exists(xess) ? Green() : Muted();
+
         DetectGpu();
         FooterFps.Text = $"   |   {state.Fps} FPS";
     }
@@ -647,7 +652,7 @@ public partial class MainWindow : Window
     void QuickUpscaler_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (syncing) return;
-        string[] values = { "dlss", "fsr411", "fsr4", "fsr3", "taa", "off" };
+        string[] values = { "dlss", "fsr411", "fsr4", "fsr3", "xess", "taa", "off" };
         if (QuickUpscaler.SelectedIndex >= 0) SetComboTag(UpscalerCombo, values[QuickUpscaler.SelectedIndex]);
     }
     void QuickPreset_Changed(object sender, SelectionChangedEventArgs e)
@@ -665,7 +670,7 @@ public partial class MainWindow : Window
 
     void SetQuickUpscaler(string value)
     {
-        QuickUpscaler.SelectedIndex = value switch { "dlss" => 0, "fsr411" => 1, "fsr4" => 2, "fsr3" => 3, "taa" => 4, _ => 5 };
+        QuickUpscaler.SelectedIndex = value switch { "dlss" => 0, "fsr411" => 1, "fsr4" => 2, "fsr3" => 3, "xess" => 4, "taa" => 5, _ => 6 };
     }
     void SetQuickFps(string value)
     {

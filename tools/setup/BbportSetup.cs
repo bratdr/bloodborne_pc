@@ -56,7 +56,7 @@ class Options {
     public string RepoUrl, Branch;
     public Dictionary<string, string> Ini = new Dictionary<string, string>();
     public Dictionary<string, string> Env = new Dictionary<string, string>();
-    public bool DlssModel, Fsr4Models, DesktopLink, StartMenuLink;
+    public bool DlssModel, Fsr4Models, XessModel, DesktopLink, StartMenuLink;
 }
 
 class SetupForm : Form {
@@ -108,7 +108,7 @@ class SetupForm : Form {
     TextBox rootBox, gameBox, repoBox, branchBox, logBox;
     Label gameStatus, rootStatus, statusLabel;
     ComboBox resolution, frameRate, upscaler, preset, live, modelLod, language, presentMode;
-    CheckBox fullscreen, showFps, sharpen, dlssModel, fsr4Models, desktopLink, startMenuLink;
+    CheckBox fullscreen, showFps, sharpen, dlssModel, fsr4Models, xessModel, desktopLink, startMenuLink;
     readonly List<KeyValuePair<string, CheckBox>> effects = new List<KeyValuePair<string, CheckBox>>();
     Button installButton, saveButton, playButton;
     TabControl tabs;
@@ -205,7 +205,8 @@ class SetupForm : Form {
 
         // Image quality.
         var image = Group("Image quality", 2);
-        var upscalers = new List<Choice> { new Choice("FSR 3.1", "fsr3"), new Choice("FSR 4 (INT8 model)", "fsr4"),
+        var upscalers = new List<Choice> { new Choice("FSR 3.1", "fsr3"), new Choice("Intel XeSS", "xess"),
+                                           new Choice("FSR 4 (INT8 model)", "fsr4"),
                                            new Choice("TAA (native anti-aliasing)", "taa"), new Choice("Off", "off") };
         if (nvidia) upscalers.Insert(0, new Choice("DLSS (NVIDIA RTX)", "dlss"));
         upscaler = Combo(image, "Upscaler", upscalers.ToArray());
@@ -238,10 +239,12 @@ class SetupForm : Form {
         dlssModel = Check("Download NVIDIA's DLSS model (needed for DLSS)");
         dlssModel.Enabled = nvidia;
         fsr4Models = Check("Download the FSR 4 models (needed for FSR 4, ~300 MB)");
+        xessModel = Check("Download Intel's XeSS library (needed for XeSS)");
         desktopLink = Check("Desktop shortcut");
         startMenuLink = Check("Start menu shortcut");
         AddSpan(extras, dlssModel);
         AddSpan(extras, fsr4Models);
+        AddSpan(extras, xessModel);
         AddSpan(extras, Flow(desktopLink, startMenuLink));
         column.Controls.Add(extras.Parent);
 
@@ -348,6 +351,7 @@ class SetupForm : Form {
         string u = Value(upscaler);
         preset.Enabled = u != "off" && u != "taa";
         if (u == "dlss" && !File.Exists(Path.Combine(rootBox.Text, @"out\nvngx_dlss.dll"))) dlssModel.Checked = true;
+        if (u == "xess" && !File.Exists(Path.Combine(rootBox.Text, @"out\libxess.dll"))) xessModel.Checked = true;
         if (u == "fsr4" && !Directory.Exists(Path.Combine(rootBox.Text, "fsr4_shaders"))) fsr4Models.Checked = true;
     }
 
@@ -471,6 +475,7 @@ class SetupForm : Form {
             Root = rootBox.Text.Trim().Trim('"'), Game = gameBox.Text.Trim().Trim('"'), Msys = MsysRoot(),
             RepoUrl = repoBox != null ? repoBox.Text.Trim() : null, Branch = branchBox != null ? branchBox.Text.Trim() : null,
             DlssModel = dlssModel.Enabled && dlssModel.Checked, Fsr4Models = fsr4Models.Checked,
+            XessModel = xessModel.Checked,
             DesktopLink = desktopLink.Checked, StartMenuLink = startMenuLink.Checked };
         o.Ini["upscaler"] = Value(upscaler);
         o.Ini["preset"] = Value(preset);
@@ -524,6 +529,15 @@ class SetupForm : Form {
         WriteLauncher(Path.Combine(o.Root, "Bloodborne.cmd"), o.Env);
         Log("Wrote " + Path.Combine(o.Root, "Bloodborne.cmd"));
         File.WriteAllText(Path.Combine(o.Root, @"out\game_dir.txt"), Path.GetFullPath(o.Game));
+        string clangBin = Path.Combine(o.Msys, @"clang64\bin");
+        if (Directory.Exists(clangBin)) {
+            foreach (string dll in new[] { "libc++.dll", "zlib1.dll", "SDL3.dll", "libunwind.dll", "libwinpthread-1.dll" }) {
+                string src = Path.Combine(clangBin, dll), dst = Path.Combine(o.Root, @"out\" + dll);
+                try {
+                    if (File.Exists(src) && !File.Exists(dst)) File.Copy(src, dst, true);
+                } catch {}
+            }
+        }
         string icon = MakeIcon(o);
         if (o.DesktopLink) MakeShortcut(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), o, icon);
         if (o.StartMenuLink) MakeShortcut(Environment.GetFolderPath(Environment.SpecialFolder.Programs), o, icon);
@@ -625,7 +639,8 @@ class SetupForm : Form {
             Step(++step, steps, "Models");
             if (o.DlssModel) Must(Bash(o, "bash tools/fetch_dlss.sh"), "downloading the DLSS model");
             if (o.Fsr4Models) Must(Bash(o, "bash tools/fetch_fsr4_assets.sh"), "downloading the FSR 4 models");
-            if (!o.DlssModel && !o.Fsr4Models) Log("(none selected)");
+            if (o.XessModel) Must(Bash(o, "bash tools/fetch_xess.sh"), "downloading the XeSS library");
+            if (!o.DlssModel && !o.Fsr4Models && !o.XessModel) Log("(none selected)");
             Step(++step, steps, "Building bbport (several minutes the first time)");
             Must(Bash(o, "bash build.sh"), "building bbport (log above; out/gpu-build.log has the GPU library's)");
             Step(++step, steps, "Settings and shortcuts");

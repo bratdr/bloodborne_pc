@@ -68,6 +68,7 @@ static class Program
         Check(Get<TextBlock>("RuntimeStatus").Text=="Not built","Missing runtime status");
         Check(Get<TextBlock>("DlssStatus").Text=="Model DLL not installed","Missing DLSS status");
         Check(Get<TextBlock>("Fsr4Status").Text=="Assets not installed","Missing FSR4 status");
+        Check(Get<TextBlock>("XessStatus").Text=="Library not installed","Missing XeSS status");
         Check(Get<Image>("HeroImage").Source is BitmapSource, "Embedded hero not loaded");
         foreach(var name in new[]{"OnlineHostBox","OnlineWebApiBox","OnlineGameApiBox","OnlineWebsiteBox","OnlineUsernameBox","OnlineP2pPortBox"})
             Check(Get<TextBox>(name).Text=="","Online must have no preconfigured address/account: "+name);
@@ -91,13 +92,15 @@ static class Program
         Directory.CreateDirectory(Path.Combine(root,"out"));
         File.WriteAllText(Path.Combine(root,"out","bb-probe.exe"),"status fixture only");
         File.WriteAllText(Path.Combine(root,"out","nvngx_dlss.dll"),"status fixture only");
+        File.WriteAllText(Path.Combine(root,"out","libxess.dll"),"status fixture only");
         Directory.CreateDirectory(Path.Combine(root,"fsr4_shaders")); Call("RefreshStatus");
         Check(Get<TextBlock>("RuntimeStatus").Text=="Ready","Runtime existence detection");
         Check(Get<TextBlock>("DlssStatus").Text=="Available","DLSS existence detection");
+        Check(Get<TextBlock>("XessStatus").Text=="Available","XeSS existence detection");
         Check(Get<TextBlock>("Fsr4Status").Text=="v07 available","FSR4 legacy detection");
         Directory.CreateDirectory(Path.Combine(root,"fsr4_411")); Call("RefreshStatus");
         Check(Get<TextBlock>("Fsr4Status").Text=="4.1.1 available","FSR4 4.1.1 detection");
-        File.Delete(Path.Combine(root,"out","bb-probe.exe")); File.Delete(Path.Combine(root,"out","nvngx_dlss.dll"));
+        File.Delete(Path.Combine(root,"out","bb-probe.exe")); File.Delete(Path.Combine(root,"out","nvngx_dlss.dll")); File.Delete(Path.Combine(root,"out","libxess.dll"));
         Directory.Delete(Path.Combine(root,"fsr4_shaders")); Directory.Delete(Path.Combine(root,"fsr4_411"));
         Get<TextBox>("PathBox").Text=Path.Combine(root,"bad"); Call("RefreshStatus");
         Check(!Get<Button>("PlayButton").IsEnabled,"Invalid path must disable Play");

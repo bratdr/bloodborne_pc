@@ -171,6 +171,7 @@
                                                 <RowDefinition Height="28" />
                                                 <RowDefinition Height="28" />
                                                 <RowDefinition Height="28" />
+                                                <RowDefinition Height="28" />
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Text="" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Foreground="#B2A591" />
                                             <TextBlock Grid.Row="0" Grid.Column="1" Text="Game version" Style="{StaticResource StatusLabel}" />
@@ -204,9 +205,12 @@
                                             <TextBlock Grid.Row="6" Text="" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Foreground="#B2A591" />
                                             <TextBlock Grid.Row="6" Grid.Column="1" Text="FSR 4" Style="{StaticResource StatusLabel}" />
                                             <TextBlock Grid.Row="6" Grid.Column="2" x:Name="Fsr4Status" Text="Checking..." Style="{StaticResource StatusValue}" />
-                                            <Path Grid.Row="7" Data="M0,0 H6 V6 H0Z M8,0 H14 V6 H8Z M0,8 H6 V14 H0Z M8,8 H14 V14 H8Z" Fill="#B2A591" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Row="7" Grid.Column="1" Text="Runtime" Style="{StaticResource StatusLabel}" />
-                                            <TextBlock Grid.Row="7" Grid.Column="2" x:Name="RuntimeStatus" Text="Checking..." Style="{StaticResource StatusValue}" />
+                                            <TextBlock Grid.Row="7" Text="" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Foreground="#B2A591" />
+                                            <TextBlock Grid.Row="7" Grid.Column="1" Text="Intel XeSS" Style="{StaticResource StatusLabel}" />
+                                            <TextBlock Grid.Row="7" Grid.Column="2" x:Name="XessStatus" Text="Checking..." Style="{StaticResource StatusValue}" />
+                                            <Path Grid.Row="8" Data="M0,0 H6 V6 H0Z M8,0 H14 V6 H8Z M0,8 H6 V14 H0Z M8,8 H14 V14 H8Z" Fill="#B2A591" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Row="8" Grid.Column="1" Text="Runtime" Style="{StaticResource StatusLabel}" />
+                                            <TextBlock Grid.Row="8" Grid.Column="2" x:Name="RuntimeStatus" Text="Checking..." Style="{StaticResource StatusValue}" />
                                         </Grid>
                                     </StackPanel>
                                 </ContentControl>
@@ -259,6 +263,7 @@
                                                     <ComboBoxItem Content="FSR 4.1.1" />
                                                     <ComboBoxItem Content="FSR 4 v07" />
                                                     <ComboBoxItem Content="FSR 3.1" />
+                                                    <ComboBoxItem Content="Intel XeSS" />
                                                     <ComboBoxItem Content="TAA" />
                                                     <ComboBoxItem Content="Off" />
                                                 </ComboBox>
@@ -390,6 +395,7 @@
                                             <ComboBoxItem Content="FSR 4.1.1" Tag="fsr411" />
                                             <ComboBoxItem Content="FSR 4 v07 (legacy)" Tag="fsr4" />
                                             <ComboBoxItem Content="FSR 3.1" Tag="fsr3" />
+                                            <ComboBoxItem Content="Intel XeSS" Tag="xess" />
                                             <ComboBoxItem Content="TAA" Tag="taa" />
                                             <ComboBoxItem Content="Off" Tag="off" />
                                         </ComboBox>
