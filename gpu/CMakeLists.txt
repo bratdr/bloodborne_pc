@@ -1,6 +1,9 @@
 # bbport GPU library: shadPS4 video core + shader recompiler + Gnm/VideoOut
 # drivers, adapted to the native_probe runtime through shims in shim/.
 cmake_minimum_required(VERSION 3.24)
+if (POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
 project(bbgpu LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -102,14 +105,12 @@ set(FFX_VK_PORTABLE_BUILD_PROBE OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/fsr-vulkan EXCLUDE_FROM_ALL)
 if (WIN32)
     # AMD's FidelityFX sources rely on MSVC's transitive includes (memset, floor, placement new,
-    # swprintf_s) on _WIN32.
+    # swprintf_s, _countof) on _WIN32.
     foreach(ffx_target IN ITEMS ffx_vulkan_portable ffx_vulkan_fsr3_vk_backend_1_1_4
             ffx_vulkan_fsr3_host_1_1_4 ffx_vulkan_fsr4_v07_vulkan ffx_vulkan_fsr4_v07_assets)
         if (TARGET ${ffx_target})
-            target_compile_options(${ffx_target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdio>"
-                "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cwchar>" "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstring>"
-                "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cmath>" "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include new>"
-                "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include mutex>")
+            target_compile_options(${ffx_target} PRIVATE
+                "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/ffx_win_compat.h>")
         endif()
     endforeach()
 endif()
