@@ -213,13 +213,18 @@ void Load() {
     v.startup_live_resolution = v.live_resolution;
 }
 
-void ConfigureUpscalerSupport(bool fsr4, bool fsr411, bool dlss) {
+void ConfigureUpscalerSupport(bool fsr4, bool fsr411, bool dlss, bool xess) {
     auto& v = Get();
     v.fsr4_supported = fsr4;
     v.fsr411_supported = fsr4 && fsr411;
     v.dlss_supported = dlss;
+    v.xess_supported = xess;
     const int requested = v.upscaler;
-    if (requested == UpscalerDlss && !dlss) {
+    if (requested == UpscalerXess && !xess) {
+        v.fsr4_problem = "Intel XeSS needs libxess and a supported GPU (DP4a/XMX); using FSR 3.1";
+        std::printf("Upscaler: xess unavailable; falling back to FSR 3.1 before the first frame\n");
+        v.upscaler = UpscalerFsr3;
+    } else if (requested == UpscalerDlss && !dlss) {
         v.fsr4_problem = "DLSS needs an NVIDIA RTX GPU, its driver's NGX and nvngx_dlss; using FSR 3.1";
         std::printf("Upscaler: dlss unavailable; falling back to FSR 3.1 before the first frame\n");
         v.upscaler = UpscalerFsr3;
@@ -376,7 +381,7 @@ const char* PresetName(int preset) {
 
 const char* UpscalerName(int upscaler) {
     static constexpr const char* names[UpscalerCount] = {"off", "fsr3", "fsr4", "fsr411", "taa",
-                                                                  "dlss"};
+                                                         "dlss", "xess"};
     return names[std::clamp(upscaler, 0, UpscalerCount - 1)];
 }
 

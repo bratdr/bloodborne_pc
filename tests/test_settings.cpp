@@ -62,8 +62,16 @@ int main() {
     BbSettings::ConfigureUpscalerSupport(false, false, false);
     assert(s.upscaler == BbSettings::UpscalerFsr3 && !s.dlss_supported);
     s.upscaler = BbSettings::UpscalerDlss;
-    BbSettings::ConfigureUpscalerSupport(false, false, true);
+    BbSettings::ConfigureUpscalerSupport(false, false, true, false);
     assert(s.upscaler == BbSettings::UpscalerDlss && s.dlss_supported);
+    s.upscaler = BbSettings::UpscalerXess;
+    BbSettings::Save();
+    assert(Read(path).find("upscaler=xess\n") != std::string::npos);
+    BbSettings::ConfigureUpscalerSupport(false, false, false, false);
+    assert(s.upscaler == BbSettings::UpscalerFsr3 && !s.xess_supported);
+    s.upscaler = BbSettings::UpscalerXess;
+    BbSettings::ConfigureUpscalerSupport(false, false, false, true);
+    assert(s.upscaler == BbSettings::UpscalerXess && s.xess_supported);
     s.camera_controls = true;
     s.camera_fov_scale = 1.25f;
     s.camera_distance_scale = 0.80f;

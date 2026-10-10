@@ -10,15 +10,15 @@
 namespace BbSettings {
 
 enum Upscaler : int { UpscalerOff = 0, UpscalerFsr3 = 1, UpscalerFsr4 = 2, UpscalerFsr411 = 3,
-                      UpscalerTaa = 4, UpscalerDlss = 5, UpscalerCount };
+                      UpscalerTaa = 4, UpscalerDlss = 5, UpscalerXess = 6, UpscalerCount };
 /// FSR 4 v07 or FSR 4.1.1: the same inputs, settings and placement in the frame.
 inline bool IsFsr4(int upscaler) {
     return upscaler == UpscalerFsr4 || upscaler == UpscalerFsr411;
 }
-/// FSR 4, FSR 4.1.1 or DLSS: one frame's inputs to a separate upscaler, which writes the
+/// FSR 4, FSR 4.1.1, DLSS or XeSS: one frame's inputs to a separate upscaler, which writes the
 /// output image (TemporalUpscaler::RecordFsr4); FSR 3.1 and TAA are recorded in place.
 inline bool IsFrameUpscaler(int upscaler) {
-    return IsFsr4(upscaler) || upscaler == UpscalerDlss;
+    return IsFsr4(upscaler) || upscaler == UpscalerDlss || upscaler == UpscalerXess;
 }
 enum Preset : int { NativeAA = 0, Quality, Balanced, Performance, UltraPerformance, PresetCount };
 enum DebugView : int { DebugNone = 0, DebugReactive = 1, DebugMotion = 2, DebugViewCount };
@@ -90,7 +90,8 @@ struct Values {
     std::atomic<int> live_resolution{0};
     /// Why FSR 4 cannot run (assets, device features), or null. Set by the renderer.
     std::atomic<const char*> fsr4_problem{nullptr};
-    std::atomic<bool> fsr4_supported{false}, fsr411_supported{false}, dlss_supported{false};
+    std::atomic<bool> fsr4_supported{false}, fsr411_supported{false}, dlss_supported{false},
+        xess_supported{false};
 
     /// Startup settings for the explicit BB_RENDER_RES compatibility patch only.
     int startup_preset = NativeAA;
@@ -108,8 +109,8 @@ const char* MenuText(const char* english, const char* russian);
 
 /// Reads the file, then the environment overrides. Called once at start.
 void Load();
-/// Checks the loaded choice before the first frame; unsupported FSR 4 or DLSS uses FSR 3.1.
-void ConfigureUpscalerSupport(bool fsr4, bool fsr411, bool dlss = false);
+/// Checks the loaded choice before the first frame; unsupported FSR 4, DLSS or XeSS uses FSR 3.1.
+void ConfigureUpscalerSupport(bool fsr4, bool fsr411, bool dlss = false, bool xess = false);
 /// Startup-patched scene dimensions cannot change until run.sh prepares a new image.
 bool FixedRenderSession();
 int RenderPreset();

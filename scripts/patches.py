@@ -281,7 +281,8 @@ def main():
     if a.print_preset_size:
         settings=read_settings(a.settings)
         if 'BB_UPSCALER' in os.environ:
-            settings['upscaler']='fsr3' if os.environ['BB_UPSCALER']=='fsr3' else 'off'
+            u = os.environ['BB_UPSCALER']
+            settings['upscaler'] = 'taa' if u == 'taa' else ('off' if u in ('off', 'none') else 'fsr3')
         if 'BB_UPSCALE_PRESET' in os.environ:
             settings['preset']=os.environ['BB_UPSCALE_PRESET']
         size=render_size(settings)
