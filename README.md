@@ -397,7 +397,33 @@ Windows: `setup.bat` compiles `tools\setup\BbportSetup.cs` with the C# compiler 
    changes the settings. `fullscreen=1` in `bbport.ini` (or F11 in the game) gives a
    borderless window at the desktop size; with `output_res=3840x2160` and `preset=1` (FSR 3.1
    Quality, scene 2560x1440) the RTX 4090 above stays at the 120 Hz display limit. The GTK
-   launcher and the AppImage are Linux-only.
+   launcher and the AppImage are Linux-only. For Windows, a modern native graphical launcher (`BloodborneLauncher.exe`) is available.
+
+### Modern Windows Launcher (`BloodborneLauncher.exe`)
+
+In addition to `setup.bat`, a modern native WPF (.NET 8) graphical launcher is provided in [`launcher-windows/BloodborneLauncher/`](launcher-windows/BloodborneLauncher/). It provides:
+- Visual game dump folder selection with artwork detection from `sce_sys`.
+- Resolution, aspect ratio / widescreen (21:9, 32:9), and frame rate limits (30, 60, 90 FPS).
+- Upscaler selection: **Intel XeSS**, AMD FSR 3.1 / FSR 4 v07 / FSR 4.1.1, NVIDIA DLSS, TAA, or Off.
+- PC keyboard & mouse controls, camera adjustments, post-processing graphics effects, mod management, and online (shadNet) configuration.
+
+#### Building `BloodborneLauncher.exe` Locally
+
+1. **Prerequisites:** Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (e.g. via `winget install Microsoft.DotNet.SDK.8`).
+2. **Register NuGet Package Source:**
+   ```powershell
+   dotnet nuget add source https://api.nuget.org/v3/index.json -n nuget.org
+   ```
+3. **Publish Standalone Single-File Executable:**
+   From the root of the repository, run:
+   ```powershell
+   dotnet publish launcher-windows/BloodborneLauncher/BloodborneLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .
+   ```
+   This generates a standalone, self-contained `BloodborneLauncher.exe` directly in the repository root.
+4. **(Optional) Run Verification Test Suite:**
+   ```powershell
+   pwsh -File ./launcher-windows/BloodborneLauncher/Verify-Launcher.ps1 -PreviewDirectory launcher-previews
+   ```
 
 How it differs from Linux, all on the Win32 API directly (no POSIX layer): the guest address
 space is reserved at start as one placeholder and mapped with section views
