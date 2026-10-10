@@ -9,6 +9,7 @@
 #include <bit>
 #include <span>
 #include <cassert>
+#include <cstdlib>
 #include <concepts>
 #include <cstddef>
 #include <functional>

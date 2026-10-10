@@ -26,6 +26,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Warn on CMake API deprecations
+if (POLICY CMP0218)
+    cmake_policy(SET CMP0218 NEW)
+endif()
 set(CMAKE_WARN_DEPRECATED ON)
 
 # Disable in-source builds
